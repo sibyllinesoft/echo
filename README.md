@@ -67,14 +67,6 @@ def compute_levy(amount, percentage):
 ### 🤖 Built for AI Workflows
 Native MCP server integration means your AI coding assistants can automatically detect and refactor duplicates. The future of development is here.
 
-## Real-World Impact
-
-**Before Echo:** "We spent 2 hours chasing false positives from SonarQube just to find 3 real duplicates."
-
-**With Echo:** "Found 47 actual duplicates in 30 seconds. Our codebase is 15% smaller and way more maintainable."
-
-— Senior Developer at Fortune 500 Company
-
 ## Use Cases That Matter
 
 ### 🚀 **Pre-commit Hooks**
