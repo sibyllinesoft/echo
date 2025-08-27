@@ -130,7 +130,7 @@ class MockIndexer:
 
 
 # Simplified MCP Server implementation for testing
-class TestEchoMCPServer:
+class MockEchoMCPServer:
     """Simplified MCP server for testing."""
     
     def __init__(self, config: Optional[MockConfig] = None):
@@ -307,10 +307,10 @@ class TestEchoMCPServer:
             return {'ok': False, 'error': str(e)}
 
 
-class TestMCPProtocolHandler:
+class MockMCPProtocolHandler:
     """Test MCP protocol handler."""
     
-    def __init__(self, server: TestEchoMCPServer):
+    def __init__(self, server: MockEchoMCPServer):
         self.server = server
         self.tools = {
             'index_repo': self._handle_index_repo,
@@ -392,7 +392,7 @@ async def test_basic_functionality():
     """Test basic MCP server functionality."""
     print("Testing EchoMCPServer basic functionality...")
     
-    server = TestEchoMCPServer()
+    server = MockEchoMCPServer()
     await server.initialize(Path("/tmp/test_repo"))
     print("✓ Server initialization successful")
     
@@ -433,9 +433,9 @@ async def test_protocol_handler():
     """Test MCP protocol handler."""
     print("\nTesting MCPProtocolHandler...")
     
-    server = TestEchoMCPServer()
+    server = MockEchoMCPServer()
     await server.initialize()
-    handler = TestMCPProtocolHandler(server)
+    handler = MockMCPProtocolHandler(server)
     
     # Test valid request
     request = {
@@ -542,3 +542,24 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     success = asyncio.run(main())
     sys.exit(0 if success else 1)
+
+
+# Add proper test functions for pytest
+def test_echo_mcp_server_creation():
+    """Test that MockEchoMCPServer can be created."""
+    server = MockEchoMCPServer()
+    assert server.config is not None
+    assert server.config.min_tokens == 40
+
+
+def test_mcp_protocol_handler_creation():
+    """Test that MockMCPProtocolHandler can be created."""
+    server = MockEchoMCPServer()
+    handler = MockMCPProtocolHandler(server)
+    assert handler.server == server
+    assert 'index_repo' in handler.tools
+
+
+def test_json_resource_validation():
+    """Test JSON resource format validation."""
+    test_json_resource_format()  # Call the existing function

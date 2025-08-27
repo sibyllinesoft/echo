@@ -92,6 +92,6 @@ Echo addresses key limitations in existing tools:
 
 ## Links
 
-- [GitHub Repository](https://github.com/echo-project/echo)
+- [GitHub Repository](https://github.com/sibyllinesoft/echo)
 - [PyPI Package](https://pypi.org/project/echo-cli/)
-- [Documentation](https://github.com/echo-project/echo#readme)
+- [Documentation](https://github.com/sibyllinesoft/echo#readme)

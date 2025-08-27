@@ -9,14 +9,14 @@ and semantic embeddings.
 __version__ = "0.1.0"
 __author__ = "Echo Project Contributors"
 
-from .scan import scan_repository, scan_changed_files
-from .parser import extract_blocks
-from .storage import EchoDatabase
 from .config import EchoConfig
+from .parser import extract_blocks
+from .scan import scan_changed_files, scan_repository
+from .storage import EchoDatabase
 
 __all__ = [
     "scan_repository",
-    "scan_changed_files", 
+    "scan_changed_files",
     "extract_blocks",
     "EchoDatabase",
     "EchoConfig",

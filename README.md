@@ -217,7 +217,7 @@ graph LR
 pip install echo-cli
 
 # Development setup
-git clone https://github.com/echo-project/echo.git
+git clone https://github.com/sibyllinesoft/echo.git
 cd echo && pip install -e ".[dev]"
 
 # Run the full test suite
@@ -242,8 +242,8 @@ Contact: enterprise@echo-project.com
 
 **Join the duplicate detection revolution:**
 
-- 🐛 **Found a bug?** [Open an issue](https://github.com/echo-project/echo/issues)
-- 💡 **Feature request?** [Start a discussion](https://github.com/echo-project/echo/discussions)  
+- 🐛 **Found a bug?** [Open an issue](https://github.com/sibyllinesoft/echo/issues)
+- 💡 **Feature request?** [Start a discussion](https://github.com/sibyllinesoft/echo/discussions)  
 - 🚀 **Want to contribute?** Check our [contributing guide](CONTRIBUTING.md)
 - 💬 **Questions?** Join our [Discord community](https://discord.gg/echo-dev)
 

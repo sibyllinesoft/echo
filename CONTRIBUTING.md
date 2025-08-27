@@ -14,7 +14,7 @@ Welcome! We're excited that you're interested in contributing to Echo, the next-
 
 1. **Fork and Clone**
    ```bash
-   git clone https://github.com/your-username/echo.git
+   git clone https://github.com/sibyllinesoft/echo.git
    cd echo
    ```
 
