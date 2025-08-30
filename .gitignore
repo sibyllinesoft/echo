@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 *$py.class
+*.pyo
+*.pyd
 
 # C extensions
 *.so
@@ -75,9 +77,12 @@ dupes.md
 .idea/
 *.swp
 *.swo
+*.orig
+*.rej
 *~
 .DS_Store
 .vs/
+*.code-workspace
 
 # Jupyter Notebook
 .ipynb_checkpoints
@@ -103,6 +108,9 @@ ipython_config.py
 .mypy_cache/
 .dmypy.json
 dmypy.json
+
+# Black cache
+.black/
 
 # Pyre type checker
 .pyre/
