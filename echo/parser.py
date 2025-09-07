@@ -98,7 +98,7 @@ class LanguageParser:
             elif self.language == "javascript":
                 lang = Language(ts_javascript.language())
             elif self.language == "typescript":
-                lang = Language(ts_typescript.language())
+                lang = Language(ts_typescript.language_typescript())
             else:
                 raise ValueError(f"Unsupported language: {self.language}")
 
@@ -161,19 +161,39 @@ class LanguageParser:
     ) -> Iterator[CodeBlock]:
         """Extract structured code blocks (functions, classes, etc.)."""
         extractable_types = self.EXTRACTABLE_NODES.get(self.language, set())
+        
+        def has_extractable_children(node: Node) -> bool:
+            """Check if node has children that can be extracted as blocks."""
+            for child in node.children:
+                if child.type in extractable_types and child.type not in {"program", "module"}:
+                    return True
+                if has_extractable_children(child):
+                    return True
+            return False
 
         def traverse(node: Node) -> Iterator[CodeBlock]:
             if node.type in extractable_types:
-                # Only extract if it's meaningful (not just the root program/module)
-                if node.type not in {"program", "module"} or self._is_meaningful_block(
-                    node
-                ):
-                    block = self._create_code_block(
-                        node, content, file_path, content_lines
-                    )
-                    if block and block.token_count >= self.MIN_BLOCK_TOKENS:
-                        yield block
-                        return  # Don't traverse children of extracted blocks
+                # For program/module nodes, prefer individual children over the whole program
+                if node.type in {"program", "module"}:
+                    if has_extractable_children(node):
+                        # Skip program/module extraction, traverse children instead
+                        for child in node.children:
+                            yield from traverse(child)
+                        return
+                    else:
+                        # Skip program/module extraction to allow chunking
+                        # This lets the chunking logic handle non-function code
+                        for child in node.children:
+                            yield from traverse(child)
+                        return
+                
+                # Extract this node as a block
+                block = self._create_code_block(
+                    node, content, file_path, content_lines
+                )
+                if block and block.token_count >= self.MIN_BLOCK_TOKENS:
+                    yield block
+                    return  # Don't traverse children of extracted blocks
 
             # Traverse children
             for child in node.children:

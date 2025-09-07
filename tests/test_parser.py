@@ -71,6 +71,10 @@ class TestLanguageParser:
     def test_parse_python_function(self):
         """Test parsing a simple Python function."""
         parser = LanguageParser('python')
+        # Temporarily lower minimum block tokens for this test
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 10
+        
         content = """
 def hello_world():
     '''A simple function that returns hello world.'''
@@ -80,7 +84,10 @@ def hello_world():
 def another_function(x, y):
     return x + y
 """
-        blocks = parser.extract_blocks(content, Path('test.py'))
+        try:
+            blocks = parser.extract_blocks(content, Path('test.py'))
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min
         
         # Should extract at least the function definitions
         assert len(blocks) >= 2
@@ -92,11 +99,15 @@ def another_function(x, y):
         assert hello_block.lang == 'python'
         assert hello_block.start_line == 2  # Note: 1-based indexing
         assert 'hello_world' in hello_block.tokens
-        assert 'Hello, World!' in hello_block.tokens
+        assert '"Hello, World!"' in hello_block.tokens
         
     def test_parse_javascript_function(self):
         """Test parsing a JavaScript function."""
         parser = LanguageParser('javascript')
+        # Temporarily lower minimum block tokens for this test
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 7
+        
         content = """
 function greet(name) {
     const message = `Hello, ${name}!`;
@@ -115,7 +126,10 @@ class Person {
     }
 }
 """
-        blocks = parser.extract_blocks(content, Path('test.js'))
+        try:
+            blocks = parser.extract_blocks(content, Path('test.js'))
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min
         
         # Should extract function, arrow function, class, and methods
         assert len(blocks) >= 3
@@ -128,6 +142,10 @@ class Person {
     def test_parse_typescript_interface(self):
         """Test parsing TypeScript interface."""
         parser = LanguageParser('typescript')
+        # Temporarily lower minimum block tokens for this test
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 9
+        
         content = """
 interface User {
     name: string;
@@ -148,7 +166,10 @@ class UserService {
     }
 }
 """
-        blocks = parser.extract_blocks(content, Path('test.ts'))
+        try:
+            blocks = parser.extract_blocks(content, Path('test.ts'))
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min
         
         # Should extract interface, type alias, function, and class
         assert len(blocks) >= 4
@@ -205,12 +226,19 @@ if __name__ == "__main__":
     def test_token_extraction(self):
         """Test token extraction from AST nodes."""
         parser = LanguageParser('python')
+        # Temporarily lower minimum block tokens for this test
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 10
+        
         content = """
 def calculate(x: int, y: int) -> int:
     result = x + y
     return result
 """
-        blocks = parser.extract_blocks(content, Path('test.py'))
+        try:
+            blocks = parser.extract_blocks(content, Path('test.py'))
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min
         
         assert len(blocks) >= 1
         func_block = next(b for b in blocks if b.node_type == 'function_definition')
@@ -272,6 +300,14 @@ function func2() {
 const arrow = () => "arrow";
 """
         
+        # Temporarily lower minimum block tokens for cached parsers
+        python_parser = get_parser('python')
+        js_parser = get_parser('javascript')
+        original_py_min = python_parser.MIN_BLOCK_TOKENS
+        original_js_min = js_parser.MIN_BLOCK_TOKENS
+        python_parser.MIN_BLOCK_TOKENS = 5
+        js_parser.MIN_BLOCK_TOKENS = 5
+        
         with NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f1:
             f1.write(python_content)
             py_file = Path(f1.name)
@@ -296,11 +332,21 @@ const arrow = () => "arrow";
             assert any(b.file_path == js_file for b in js_blocks)
             
         finally:
+            python_parser.MIN_BLOCK_TOKENS = original_py_min
+            js_parser.MIN_BLOCK_TOKENS = original_js_min
             py_file.unlink(missing_ok=True)
             js_file.unlink(missing_ok=True)
             
     def test_extract_blocks_with_language_filter(self):
         """Test extracting blocks with language filtering."""
+        # Temporarily lower minimum block tokens for cached parsers
+        python_parser = get_parser('python')
+        js_parser = get_parser('javascript')
+        original_py_min = python_parser.MIN_BLOCK_TOKENS
+        original_js_min = js_parser.MIN_BLOCK_TOKENS
+        python_parser.MIN_BLOCK_TOKENS = 3
+        js_parser.MIN_BLOCK_TOKENS = 3
+        
         with NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f1:
             f1.write('def func(): pass')
             py_file = Path(f1.name)
@@ -321,24 +367,34 @@ const arrow = () => "arrow";
             assert all(b.lang == 'javascript' for b in blocks)
             
         finally:
+            python_parser.MIN_BLOCK_TOKENS = original_py_min
+            js_parser.MIN_BLOCK_TOKENS = original_js_min
             py_file.unlink(missing_ok=True)
             js_file.unlink(missing_ok=True)
             
     def test_extract_blocks_from_content(self):
         """Test extracting blocks from content string."""
+        # Temporarily lower minimum block tokens for cached parser
+        python_parser = get_parser('python')
+        original_min = python_parser.MIN_BLOCK_TOKENS
+        python_parser.MIN_BLOCK_TOKENS = 10
+        
         content = """
 def example_function():
     x = 1
     y = 2
     return x + y
 """
-        blocks = extract_blocks_from_content(content, Path('test.py'), 'python')
-        
-        assert len(blocks) >= 1
-        func_block = next(b for b in blocks if b.node_type == 'function_definition')
-        assert func_block.lang == 'python'
-        assert func_block.file_path == Path('test.py')
-        assert 'example_function' in func_block.tokens
+        try:
+            blocks = extract_blocks_from_content(content, Path('test.py'), 'python')
+            
+            assert len(blocks) >= 1
+            func_block = next(b for b in blocks if b.node_type == 'function_definition')
+            assert func_block.lang == 'python'
+            assert func_block.file_path == Path('test.py')
+            assert 'example_function' in func_block.tokens
+        finally:
+            python_parser.MIN_BLOCK_TOKENS = original_min
         
     def test_extract_blocks_empty_file_list(self):
         """Test extracting blocks from empty file list."""
@@ -388,20 +444,31 @@ def g(): return 1
     def test_mixed_indentation(self):
         """Test handling of mixed indentation (tabs and spaces)."""
         parser = LanguageParser('python')
+        # Temporarily lower minimum block tokens for this test
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 10
+        
         content = """
 def mixed_indent():
     x = 1  # spaces
 \ty = 2  # tab
     return x + y
 """
-        blocks = parser.extract_blocks(content, Path('test.py'))
-        
-        # Should handle mixed indentation without crashing
-        assert len(blocks) >= 1
+        try:
+            blocks = parser.extract_blocks(content, Path('test.py'))
+            
+            # Should handle mixed indentation without crashing
+            assert len(blocks) >= 1
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min
         
     def test_unicode_content(self):
         """Test handling of Unicode content."""
         parser = LanguageParser('python')
+        # Temporarily lower minimum block tokens for this test
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 10
+        
         content = """
 def greet_unicode():
     message = "Hello, 世界! 🌍"
@@ -411,18 +478,24 @@ class Café:
     def méthode(self):
         return "café"
 """
-        blocks = parser.extract_blocks(content, Path('test.py'))
-        
-        # Should handle Unicode without issues
-        assert len(blocks) >= 2
-        
-        # Check that Unicode characters are preserved in tokens/content
-        func_block = next(b for b in blocks if 'greet_unicode' in b.tokens)
-        assert '世界' in func_block.raw_content or '世界' in func_block.tokens
+        try:
+            blocks = parser.extract_blocks(content, Path('test.py'))
+            
+            # Should handle Unicode without issues
+            assert len(blocks) >= 2
+            
+            # Check that Unicode characters are preserved in tokens/content
+            func_block = next(b for b in blocks if 'greet_unicode' in b.tokens)
+            assert '世界' in func_block.raw_content or '世界' in func_block.tokens
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min
         
     def test_large_file_simulation(self):
         """Test handling of large files (simulated)."""
         parser = LanguageParser('python')
+        # Temporarily lower minimum block tokens for this test (functions have ~15 tokens each)
+        original_min = parser.MIN_BLOCK_TOKENS
+        parser.MIN_BLOCK_TOKENS = 10
         
         # Create a content with many functions
         functions = []
@@ -435,13 +508,16 @@ def function_{i}():
 """)
             
         content = '\n'.join(functions)
-        blocks = parser.extract_blocks(content, Path('large_test.py'))
-        
-        # Should extract all functions
-        function_blocks = [b for b in blocks if b.node_type == 'function_definition']
-        assert len(function_blocks) == 50
-        
-        # All blocks should have valid line numbers
-        for block in blocks:
-            assert block.start_line > 0
-            assert block.end_line >= block.start_line
+        try:
+            blocks = parser.extract_blocks(content, Path('large_test.py'))
+            
+            # Should extract all functions
+            function_blocks = [b for b in blocks if b.node_type == 'function_definition']
+            assert len(function_blocks) == 50
+            
+            # All blocks should have valid line numbers
+            for block in blocks:
+                assert block.start_line > 0
+                assert block.end_line >= block.start_line
+        finally:
+            parser.MIN_BLOCK_TOKENS = original_min

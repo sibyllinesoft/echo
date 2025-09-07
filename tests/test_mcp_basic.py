@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
-"""Basic test for MCP server functionality without heavy dependencies."""
+"""Basic test for MCP server functionality without heavy dependencies using proper pytest isolation."""
 
 import json
 import asyncio
-import sys
+import pytest
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
 
 # Simple mock classes to test the MCP server logic without dependencies
 class MockConfig:
@@ -19,6 +21,7 @@ class MockConfig:
     
     def get_cache_dir(self):
         return Path("/tmp/echo_test")
+
 
 class MockDatabase:
     def __init__(self, db_path):
@@ -35,7 +38,8 @@ class MockDatabase:
     
     def get_session(self):
         return MockSession()
-    
+
+
 class MockSession:
     def query(self, model):
         return MockQuery()
@@ -45,6 +49,7 @@ class MockSession:
     
     def __exit__(self, *args):
         pass
+
 
 class MockQuery:
     def filter_by(self, **kwargs):
@@ -56,6 +61,7 @@ class MockQuery:
     def delete(self):
         return 0
 
+
 class MockScanner:
     def scan_repository(self, repo_path, budget_ms=None):
         return MockScanResult()
@@ -63,18 +69,26 @@ class MockScanner:
     def scan_changed_files(self, file_paths):
         return MockScanResult()
 
+
 class MockScanResult:
     def __init__(self):
         self.findings = []
         self.statistics = MockStatistics()
 
+
 class MockStatistics:
     def __init__(self):
         pass
 
+
 class MockIndexer:
+    def __init__(self, config=None, database=None):
+        self.config = config
+        self.database = database
+    
     def index_repository(self, repo_path, reindex=False):
         return MockIndexingResult()
+
 
 class MockIndexingResult:
     def __init__(self):
@@ -83,59 +97,55 @@ class MockIndexingResult:
         self.processing_time_ms = 1000
         self.errors = []
 
-# Mock the imports
-import sys
-from unittest.mock import MagicMock
 
-# Mock modules
-sys.modules['echo.config'] = MagicMock()
-sys.modules['echo.scan'] = MagicMock()
-sys.modules['echo.index'] = MagicMock() 
-sys.modules['echo.storage'] = MagicMock()
-sys.modules['echo.normalize'] = MagicMock()
+def mock_create_diff_explanation(a, b):
+    return "Mock diff explanation"
 
-# Mock the classes
-sys.modules['echo.config'].EchoConfig = MockConfig
-sys.modules['echo.scan'].DuplicateScanner = MockScanner
-sys.modules['echo.scan'].create_scanner = lambda config, db_path: MockScanner()
-sys.modules['echo.index'].RepositoryIndexer = MockIndexer
-sys.modules['echo.storage'].create_database = lambda db_path: MockDatabase(db_path)
-sys.modules['echo.normalize'].create_diff_explanation = lambda a, b: "Mock diff explanation"
 
-# Now we can import our MCP server
-from echo.mcp_server import EchoMCPServer, MCPProtocolHandler
+# Test fixtures with proper mocking
+@pytest.fixture
+def mocked_dependencies():
+    """Fixture that mocks all the heavy dependencies for MCP tests."""
+    with patch('echo.config.EchoConfig', MockConfig), \
+         patch('echo.scan.DuplicateScanner', MockScanner), \
+         patch('echo.scan.create_scanner', lambda config, db_path: MockScanner()), \
+         patch('echo.index.RepositoryIndexer', MockIndexer), \
+         patch('echo.storage.create_database', lambda db_path: MockDatabase(db_path)), \
+         patch('echo.normalize.create_diff_explanation', mock_create_diff_explanation):
+        yield
 
-async def test_basic_functionality():
+
+@pytest.mark.asyncio
+async def test_basic_functionality(mocked_dependencies):
     """Test basic MCP server functionality."""
-    print("Testing EchoMCPServer basic functionality...")
+    from echo.mcp_server import EchoMCPServer
     
     # Create server instance
     server = EchoMCPServer()
     
     # Test initialization
     await server.initialize(Path("/tmp/test_repo"))
-    print("✓ Server initialization successful")
     
     # Test index status
     status = await server.index_status()
-    print(f"✓ Index status: {status}")
+    assert isinstance(status, dict)
     
     # Test configuration update
     config_result = await server.configure({
         'min_tokens': 50,
         'tau_semantic': 0.9
     })
-    print(f"✓ Configuration update: {config_result}")
+    assert isinstance(config_result, dict)
     
     # Test clear index
     clear_result = await server.clear_index()
-    print(f"✓ Clear index: {clear_result}")
-    
-    print("All basic functionality tests passed!")
+    assert isinstance(clear_result, dict)
 
-async def test_protocol_handler():
+
+@pytest.mark.asyncio
+async def test_protocol_handler(mocked_dependencies):
     """Test MCP protocol handler."""
-    print("\nTesting MCPProtocolHandler...")
+    from echo.mcp_server import EchoMCPServer, MCPProtocolHandler
     
     server = EchoMCPServer()
     await server.initialize()
@@ -150,7 +160,8 @@ async def test_protocol_handler():
     }
     
     response = await handler.handle_request(request)
-    print(f"✓ Protocol handler response: {response}")
+    assert isinstance(response, dict)
+    assert 'result' in response
     
     # Test unknown method
     request = {
@@ -160,14 +171,12 @@ async def test_protocol_handler():
     }
     
     response = await handler.handle_request(request)
-    print(f"✓ Unknown method response: {response}")
-    
-    print("Protocol handler tests passed!")
+    assert isinstance(response, dict)
+    assert 'error' in response
+
 
 def test_json_serialization():
     """Test JSON serialization of responses."""
-    print("\nTesting JSON serialization...")
-    
     # Test a typical response
     response = {
         'jsonrpc': '2.0',
@@ -180,36 +189,9 @@ def test_json_serialization():
         }
     }
     
-    try:
-        json_str = json.dumps(response)
-        parsed = json.loads(json_str)
-        print(f"✓ JSON serialization successful: {len(json_str)} chars")
-    except Exception as e:
-        print(f"✗ JSON serialization failed: {e}")
-        return False
-    
-    return True
-
-async def main():
-    """Run all tests."""
-    print("Echo MCP Server Basic Tests")
-    print("=" * 40)
-    
-    try:
-        await test_basic_functionality()
-        await test_protocol_handler()
-        test_json_serialization()
-        
-        print("\n" + "=" * 40)
-        print("🎉 All tests passed! MCP server implementation looks good.")
-        return True
-        
-    except Exception as e:
-        print(f"\n❌ Test failed: {e}")
-        import traceback
-        traceback.print_exc()
-        return False
-
-if __name__ == "__main__":
-    success = asyncio.run(main())
-    sys.exit(0 if success else 1)
+    # Test serialization and deserialization
+    json_str = json.dumps(response)
+    parsed = json.loads(json_str)
+    assert parsed == response
+    assert isinstance(json_str, str)
+    assert len(json_str) > 0
